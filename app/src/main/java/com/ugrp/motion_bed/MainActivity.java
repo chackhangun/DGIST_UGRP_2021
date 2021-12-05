@@ -9,16 +9,18 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +32,7 @@ import java.util.UUID;
 
 import static android.content.ContentValues.TAG;
 
-public class MainActivity<test> extends AppCompatActivity {
+public class MainActivity<test, textView> extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 100; //0보다 커야함. 블루투스 활성화 요청시 사용됨.
     private static final UUID BT_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final int BT_MESSAGE_READ = 1;
@@ -38,12 +40,6 @@ public class MainActivity<test> extends AppCompatActivity {
     private static final int BT_CONNECTING_STATUS = 2;
 
     public static ConnectedThread connectedThread;
-    public static CreateConnectThread createConnectThread;
-
-    private FragmentManager fragmentManager;
-    private Home_fragment home_fragment;
-    private Setting_fragment setting_fragment;
-    private FragmentTransaction fragmentTransaction;
     private List<String> list_of_devices;
 
     BluetoothAdapter btAdapter; //블루투스를 사용하려면 BluetoothAdapter 필요.//
@@ -55,22 +51,16 @@ public class MainActivity<test> extends AppCompatActivity {
     ConnectedThread connectedThread_ar;
     ConnectedThread connectedThread_bed;
     Handler bt_Handler;
-    boolean thread_check = false;
     private ImageView baby_image_view;
-
-
-
+    TextView sensor_textbox;
+    TextView bed_textbox;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        fragmentManager = getSupportFragmentManager();
-        home_fragment = new Home_fragment();
-        setting_fragment = new Setting_fragment();
-        fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.frame_layout, home_fragment).commitAllowingStateLoss();
-
         baby_image_view = findViewById(R.id.baby_photo);
+        sensor_textbox = (TextView) findViewById(R.id.sensor_status);
+        bed_textbox = (TextView) findViewById(R.id.bed_status);
 
         btAdapter = BluetoothAdapter.getDefaultAdapter();
         bt_Handler = new Handler() {
@@ -108,8 +98,7 @@ public class MainActivity<test> extends AppCompatActivity {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         if (btAdapter.isEnabled()) {///만약 블루투스가 꺼져있다면 활성화 대화창이 나타난다.
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);//intent는 화면전환 시 필요한 클래
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            Toast.makeText(getApplicationContext(), "블루투스가 활성화 되어있습니", Toast.LENGTH_LONG).show();
         } else {
             Toast.makeText(getApplicationContext(), "블루투스를 활성화가 필요합니다", Toast.LENGTH_LONG).show();
         }
@@ -123,26 +112,6 @@ public class MainActivity<test> extends AppCompatActivity {
                 String name = device.getName();
                 String MACaddress = device.getAddress();
             }
-        }
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(receiver, filter);
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    }
-
-    public void clickHandler(View view) {
-        fragmentTransaction = fragmentManager.beginTransaction();
-        switch (view.getId()) {
-            case R.id.Home_btn:
-                fragmentTransaction.replace(R.id.frame_layout, home_fragment).commitAllowingStateLoss();
-                break;
-            case R.id.Setting_btn:
-                fragmentTransaction.replace(R.id.frame_layout, setting_fragment).commitAllowingStateLoss();
-                break;
         }
     }
 
@@ -161,16 +130,23 @@ public class MainActivity<test> extends AppCompatActivity {
 
     public void showlistdevice(View view) {
         if (btAdapter.isEnabled()) {
+            IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+            registerReceiver(receiver, filter);
             pairedDevices = btAdapter.getBondedDevices();
 
             if (pairedDevices.size() > 0) {
+                for (BluetoothDevice device : pairedDevices) {
+                    String deviceName = device.getName();
+                    String deviceHardwareAddress = device.getAddress(); // MAC address
+                }
                 AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                builder.setTitle("bluetooth 장치목록 ");
+                builder.setTitle("BLUETOOTH 장치목록 ");
 
                 list_of_devices = new ArrayList();
                 for (BluetoothDevice device : pairedDevices) {
                     list_of_devices.add(device.getName());
                 }
+
                 final CharSequence[] items = list_of_devices.toArray(new CharSequence[list_of_devices.size()]);
                 list_of_devices.toArray(new CharSequence[list_of_devices.size()]);
                 builder.setItems(items, new DialogInterface.OnClickListener() {
@@ -187,66 +163,91 @@ public class MainActivity<test> extends AppCompatActivity {
                                 break;
                             }
                         }
-                        try {
-                            if (btsocket_ar == null) {
+                        boolean ar_flag = true;
+                        boolean bed_flag = true;
+                        if(btsocket_ar == null){
+                            try {
                                 btsocket_ar = bluetoothDevice_ar.createRfcommSocketToServiceRecord(BT_UUID);
                                 btsocket_ar.connect();
+                            }catch (IOException E){
+                                ar_flag = false;
+                                sensor_textbox.setText("connection failed!");
+                                sensor_textbox.setTextColor(Color.RED);
+                                E.printStackTrace();
+                            }
+
+                            if(ar_flag){
+                                sensor_textbox.setText("Connected!");
+                                sensor_textbox.setTextColor(Color.BLUE);
                                 connectedThread_ar = new ConnectedThread(btsocket_ar);
                                 connectedThread_ar.start();
-                                thread_check = true;
-                            } else {
+                            }
+                        }
+                        else{
+                            try {
                                 btsocket_bed = bluetoothDevice_bed.createRfcommSocketToServiceRecord(BT_UUID);
                                 btsocket_bed.connect();
+                            }catch (IOException E){
+                                bed_flag = false;
+                                bed_textbox.setText("connection failed!");
+                                bed_textbox.setTextColor(Color.RED);
+                                E.printStackTrace();
+                            }
+
+                            if(bed_flag){
+                                bed_textbox.setText("Connected!");
+                                bed_textbox.setTextColor(Color.BLUE);
                                 connectedThread_bed = new ConnectedThread(btsocket_bed);
                                 connectedThread_bed.start();
                             }
-                            bt_Handler.obtainMessage(BT_CONNECTING_STATUS, 1, -1).sendToTarget();
-                        } catch (IOException e) {
-                            Toast.makeText(getApplicationContext(), "블루투스 연결 중 오류가 발생했습니다.", Toast.LENGTH_LONG).show();
                         }
                     }
                 });
                 AlertDialog alert = builder.create();
                 alert.show();
+
             } else {
                 Toast.makeText(getApplicationContext(), "페어링된 장치가 없습니다.", Toast.LENGTH_LONG).show();
             }
         }
+        else{
+            Toast.makeText(getApplicationContext(), "블루투스가 활성화 되어있습니", Toast.LENGTH_LONG).show();
+        }
     }
 
-
-    private final BroadcastReceiver receiver = new BroadcastReceiver() {///블루투스 디바이스의 action found를 위해서 적는
-        @Override
+    // Create a BroadcastReceiver for ACTION_FOUND.
+    private final BroadcastReceiver receiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                BluetoothDevice device = intent.getParcelableExtra((BluetoothDevice.EXTRA_DEVICE));
+                // Discovery has found a device. Get the BluetoothDevice
+                // object and its info from the Intent.
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 String deviceName = device.getName();
-                String deviceMACaddress = device.getAddress(); //macaddress를 리턴해주는 메소드//
+                String deviceHardwareAddress = device.getAddress(); // MAC address
             }
         }
     };
 
-    /*
-        @Override
-        protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-            super.onActivityResult(requestCode, resultCode, data);
-            if (requestCode == REQUEST_CODE) {
-                if (resultCode == RESULT_OK) {
-                    try {
-                        InputStream in = getContentResolver().openInputStream(data.getData());
-                        Bitmap img = BitmapFactory.decodeStream(in);
-                        in.close();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE) {
+            if (resultCode == RESULT_OK) {
+                try {
+                    InputStream in = getContentResolver().openInputStream(data.getData());
+                    Bitmap img = BitmapFactory.decodeStream(in);
+                    in.close();
+                    baby_image_view.setImageBitmap(img);
+                } catch (Exception e) {
 
-                        baby_image_view.setImageBitmap(img);
-                    } catch (Exception e) {
-
-                    }
-                } else if (resultCode == RESULT_CANCELED) {
-                    Toast.makeText(this, "사진 선택 취소", Toast.LENGTH_LONG).show();
                 }
+            } else if (resultCode == RESULT_CANCELED) {
+                Toast.makeText(this, "사진 선택 취소", Toast.LENGTH_LONG).show();
             }
-        }*/
+        }
+    }
+
     @Override
     public void onDestroy() { //기기 검색할때는 블루투스 어댑터의 리소스가 많이 소모. 따라서 검색 중단하고 연결해야함.
         super.onDestroy();

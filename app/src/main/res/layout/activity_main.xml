@@ -6,16 +6,169 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <FrameLayout
-        android:id="@+id/frame_layout"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/baby_status"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/choose_background">
+        android:layout_height="400dp"
+        android:layout_marginTop="30dp"
+        android:background="@drawable/baby_status_box"
+        app:layout_constraintTop_toTopOf="parent">
 
-    </FrameLayout>
+
+        <ImageView
+            android:id="@+id/baby_photo"
+            android:layout_width="216dp"
+            android:layout_height="277dp"
+            android:layout_marginLeft="96dp"
+            android:layout_marginTop="16dp"
+            android:onClick="choose_photo"
+            android:scaleType="fitCenter"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/bigbaby"></ImageView>
+
+        <Button
+            android:id="@+id/wake_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="160dp"
+            android:layout_marginTop="8dp"
+            android:onClick="awaken"
+            android:text="깨우기"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/baby_photo"></Button>
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="STATUS : "
+            android:textColor="@color/black"
+            android:textSize="20dp"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toLeftOf="parent"
+            android:layout_marginLeft="45dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+
+            tools:layout_editor_absoluteX="43dp"></TextView>
+
+        <TextView
+            android:id="@+id/status_box"
+            android:layout_width="111dp"
+            android:layout_height="37dp"
+            android:layout_marginLeft="17dp"
+            android:gravity="center"
+            android:text="SAFE"
+            android:textSize="30dp"
+            android:textStyle="bold"
+            app:layout_constraintLeft_toRightOf="@id/status"
+            app:layout_constraintTop_toBottomOf="@id/wake_button"></TextView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        app:layout_constraintTop_toBottomOf="@id/baby_status"
+        app:layout_constraintBottom_toTopOf="@id/choose_background"
+        android:background="@drawable/baby_status_box"
+        android:layout_height="250dp">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id = "@+id/button_bed"
+            android:layout_width="fill_parent"
+            android:layout_height="80dp"
+            android:background="@drawable/baby_status_box"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent">
+
+            <Button
+                android:id="@+id/connection_bed"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginTop="8dp"
+                android:onClick="showlistdevice"
+                android:text="Bluetooth \n Bed"
+                android:textSize="15dp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toTopOf="parent"></Button>
+
+            <TextView
+                android:id="@+id/text_bed"
+                android:layout_width="170dp"
+                android:layout_height="30dp"
+                android:layout_marginLeft="12dp"
+                android:layout_marginTop="8dp"
+                android:text="Bed status : "
+                android:textSize="20dp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toRightOf="@id/connection_bed"
+                app:layout_constraintTop_toTopOf="parent"></TextView>
+
+            <TextView
+                android:id="@+id/bed_status"
+                android:layout_width="170dp"
+                android:layout_height="30dp"
+                android:layout_marginLeft="12dp"
+                android:text="NOT CONNECTED"
+                android:textSize="20dp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toRightOf="@id/connection_bed"
+                app:layout_constraintTop_toBottomOf="@id/text_bed"></TextView>
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id = "@+id/button_sensor"
+            android:layout_width="fill_parent"
+            android:layout_height="80dp"
+            android:background="@drawable/baby_status_box"
+            app:layout_constraintTop_toBottomOf="@id/button_bed"
+            app:layout_constraintLeft_toLeftOf="parent">
+
+            <Button
+                android:id="@+id/connection_sensor"
+                android:layout_width="150dp"
+                android:layout_height="60dp"
+                android:layout_marginLeft="16dp"
+                android:layout_marginTop="8dp"
+                android:onClick="showlistdevice"
+                android:text="Bluetooth sensor"
+                android:textSize="15dp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toTopOf="parent"></Button>
+
+            <TextView
+                android:id="@+id/text_sensor"
+                android:layout_width="170dp"
+                android:layout_height="30dp"
+                android:layout_marginLeft="12dp"
+                android:layout_marginTop="8dp"
+                android:text="Sensor status : "
+                android:textSize="20dp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toRightOf="@id/connection_sensor"
+                app:layout_constraintTop_toTopOf="parent"></TextView>
+
+            <TextView
+                android:id="@+id/sensor_status"
+                android:layout_width="170dp"
+                android:layout_height="30dp"
+                android:layout_marginLeft="12dp"
+                android:text="NOT CONNECTED"
+                android:textSize="20dp"
+                android:textStyle="bold"
+                app:layout_constraintLeft_toRightOf="@id/connection_sensor"
+                app:layout_constraintTop_toBottomOf="@id/text_sensor"></TextView>
+
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 
     <LinearLayout
         android:id="@+id/choose_background"
@@ -32,8 +185,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text = "Home"
-            android:textStyle="bold"
-            android:onClick="clickHandler"></Button>
+            android:textStyle="bold"></Button>
 
         <Button
             android:id="@+id/Setting_btn"
@@ -41,8 +193,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Setting"
-            android:textStyle="bold"
-            android:onClick="clickHandler"></Button>
+            android:textStyle="bold"></Button>
     </LinearLayout>
 
 
