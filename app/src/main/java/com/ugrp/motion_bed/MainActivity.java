@@ -14,7 +14,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
+import android.os.SystemClock;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -25,14 +25,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import static android.content.ContentValues.TAG;
-
-public class MainActivity<test, textView> extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 100; //0보다 커야함. 블루투스 활성화 요청시 사용됨.
     private static final UUID BT_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final int BT_MESSAGE_READ = 1;
@@ -54,6 +53,8 @@ public class MainActivity<test, textView> extends AppCompatActivity {
     private ImageView baby_image_view;
     TextView sensor_textbox;
     TextView bed_textbox;
+    TextView status_textbox;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,35 +62,46 @@ public class MainActivity<test, textView> extends AppCompatActivity {
         baby_image_view = findViewById(R.id.baby_photo);
         sensor_textbox = (TextView) findViewById(R.id.sensor_status);
         bed_textbox = (TextView) findViewById(R.id.bed_status);
-
+        status_textbox = (TextView) findViewById(R.id.status_box);
         btAdapter = BluetoothAdapter.getDefaultAdapter();
-        bt_Handler = new Handler() {
 
-            public void handleMessage(android.os.Message msg) {
-                if (msg.what == BT_MESSAGE_READ) {
-                    String arduinoMsg = msg.obj.toString();
-                    System.out.println(arduinoMsg);
-                    switch (arduinoMsg.toLowerCase()) {
-                        case "warning":
-                            System.out.println("warning\n");
-                            break;
-                        case "stable!":
-                            System.out.println("stable\n");
-                            break;
+
+         bt_Handler = new Handler(){
+            public void handleMessage(android.os.Message msg){
+                if(msg.what == BT_MESSAGE_READ){
+                    String readMessage = null;
+                    try {
+                        readMessage = new String((byte[]) msg.obj, "UTF-8");
+                    } catch (UnsupportedEncodingException e) {
+                        e.printStackTrace();
                     }
-                    //connectedThread_bed.write("1")
-                    /*
-                    TextView textView = home_fragment.status_box;
-                    textView.setText("warning");
-                    textView.setTextColor(Color.parseColor("#CD1039"));
+                    System.out.println(readMessage);
+                    if(readMessage.indexOf("w") == 0){
+                        System.out.println("드디어성공?");
+                        status_textbox.setText(readMessage);
+                        status_textbox.setTextColor(Color.RED);
+                        //connectedThread_bed.write("1");
+                        connectedThread_ar.write("1\n");
 
-                    //connectedThread_bed.write("1");
-
-                     */
+                    }
+                    if(readMessage.indexOf("s") == 0){
+                        status_textbox.setText(readMessage);
+                        status_textbox.setTextColor(Color.BLUE);
+                        //connectedThread_bed.write("0");
+                        connectedThread_ar.write("0\n");
+                    }
                 }
-
+                /*
+                if(msg.what == BT_CONNECTING_STATUS){
+                    if(msg.arg1 == 1)
+                        mBluetoothStatus.setText("Connected to Device: " + (String)(msg.obj));
+                    else
+                        mBluetoothStatus.setText("Connection Failed");
+                }*/
             }
-        }; //read가 올 때 write를 해주게 된다 -> 1을 한번만 보내게 된다. ///test
+        };
+
+                //read가 올 때 write를 해주게 된다 -> 1을 한번만 보내게 된다. ///test
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -254,118 +266,44 @@ public class MainActivity<test, textView> extends AppCompatActivity {
         unregisterReceiver(receiver);
     }
 
-    /* ============================ Thread to Create Bluetooth Connection =================================== */
-    public static class CreateConnectThread extends Thread {
-        public static BluetoothSocket mmSocket;
-        public static Handler handler;
-        private final static int CONNECTING_STATUS = 1;
 
-        public CreateConnectThread(BluetoothAdapter bluetoothAdapter, String address) {
-            /*
-            Use a temporary object that is later assigned to mmSocket
-            because mmSocket is final.
-             */
-            BluetoothDevice bluetoothDevice = bluetoothAdapter.getRemoteDevice(address);
-            BluetoothSocket tmp = null;
-            UUID uuid = bluetoothDevice.getUuids()[0].getUuid();
-
-            try {
-                /*
-                Get a BluetoothSocket to connect with the given BluetoothDevice.
-                Due to Android device varieties,the method below may not work fo different devices.
-                You should try using other methods i.e. :
-                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
-                 */
-                tmp = bluetoothDevice.createInsecureRfcommSocketToServiceRecord(uuid);
-
-            } catch (IOException e) {
-                Log.e(TAG, "Socket's create() method failed", e);
-            }
-            mmSocket = tmp;
-        }
-
-        public void run() {
-            // Cancel discovery because it otherwise slows down the connection.
-            BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            bluetoothAdapter.cancelDiscovery();
-            try {
-                // Connect to the remote device through the socket. This call blocks
-                // until it succeeds or throws an exception.
-                mmSocket.connect();
-                Log.e("Status", "Device connected");
-                handler.obtainMessage(CONNECTING_STATUS, 1, -1).sendToTarget();
-            } catch (IOException connectException) {
-                // Unable to connect; close the socket and return.
-                try {
-                    mmSocket.close();
-                    Log.e("Status", "Cannot connect to device");
-                    handler.obtainMessage(CONNECTING_STATUS, -1, -1).sendToTarget();
-                } catch (IOException closeException) {
-                    Log.e(TAG, "Could not close the client socket", closeException);
-                }
-                return;
-            }
-
-            // The connection attempt succeeded. Perform work associated with
-            // the connection in a separate thread.
-            connectedThread = new ConnectedThread(mmSocket);
-            connectedThread.run();
-        }
-
-        // Closes the client socket and causes the thread to finish.
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) {
-                Log.e(TAG, "Could not close the client socket", e);
-            }
-        }
-    }
-
-    /* =============================== Thread for Data Transfer =========================================== */
-    public static class ConnectedThread extends Thread {
+    public class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
-        private final static int MESSAGE_READ = 2;
-        public static Handler handler;
 
         public ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
 
-
             // Get the input and output streams, using temp objects because
             // member streams are final
             try {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+            }
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
         }
 
+        @Override
         public void run() {
             byte[] buffer = new byte[1024];  // buffer store for the stream
-            int bytes = 0; // bytes returned from read()
+            int bytes; // bytes returned from read()
             // Keep listening to the InputStream until an exception occurs
             while (true) {
                 try {
-                    /*
-                    Read from the InputStream from Arduino until termination character is reached.
-                    Then send the whole String message to GUI Handler.
-                     */
-                    buffer[bytes] = (byte) mmInStream.read();
-                    String readMessage;
-                    if (buffer[bytes] == '\n'){
-                        readMessage = new String(buffer,0,bytes);
-                        Log.e("Arduino Message",readMessage);
-                        handler.obtainMessage(MESSAGE_READ,readMessage).sendToTarget();
-                        bytes = 0;
-                    } else {
-                        bytes++;
+                    // Read from the InputStream
+                    bytes = mmInStream.available();
+                    if (bytes != 0) {
+                        buffer = new byte[10];
+                        SystemClock.sleep(100); //pause and wait for rest of data. Adjust this depending on your sending speed.
+                        bytes = mmInStream.available(); // how many bytes are ready to be read?
+                        bytes = mmInStream.read(buffer, 0, bytes); // record how many bytes we actually read
+                        bt_Handler.obtainMessage(BT_MESSAGE_READ, bytes, -1, buffer).sendToTarget(); // Send the obtained bytes to the UI activity
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -376,11 +314,10 @@ public class MainActivity<test, textView> extends AppCompatActivity {
 
         /* Call this from the main activity to send data to the remote device */
         public void write(String input) {
-            byte[] bytes = input.getBytes(); //converts entered String into bytes
+            byte[] bytes = input.getBytes();           //converts entered String into bytes
             try {
                 mmOutStream.write(bytes);
             } catch (IOException e) {
-                Log.e("Send Error","Unable to send message",e);
             }
         }
 
@@ -388,8 +325,10 @@ public class MainActivity<test, textView> extends AppCompatActivity {
         public void cancel() {
             try {
                 mmSocket.close();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+            }
         }
     }
+
 }
 
